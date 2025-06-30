@@ -8,15 +8,81 @@ toc: true
 ---
 
 ```{r load-packages, message = FALSE}
-library(tidyverse)
+
+# - loading package manager
+if (!require(pacman))
+  install.packages(pacman)
 # add any other packages you use here
+pacman::p_load(tidyverse,
+               openintro,
+               patchwork,
+               tigris,
+               sf,
+               readxl)
+
 ```
-
-
 ## 1 - A second chance
+::: {.callout-note}
+I chose to revise this set of plots from HM1 Question 3, because although the visualizations were informative and clearly illustrated the relationships, I lost 4 points for not organizing the multiple plots together using a layout tool. To improve this, I will combine these individual plots into a cohesive grid using the patchwork package, arranging them in a clear and logical format to facilitate direct comparison.
+::: 
 
 ```{r}
 #| label: label-me-1
+#| warning: false
+#| Massege: false
+county_clean <- county |>
+  filter(!is.na(homeownership),!is.na(poverty))
+
+plot_a <- ggplot(county_clean, aes(x = homeownership, y = poverty))+
+  geom_point()+
+  labs(title = "Plot A")
+  
+plot_b <- ggplot(county_clean, aes(x = homeownership, y = poverty))+
+  geom_point()+
+  geom_smooth(method = "gam", se = FALSE, color = "Blue")+
+  labs(title = "Plot B")
+
+plot_c <- ggplot(county_clean, aes(x = homeownership, y = poverty, group = metro))+
+  geom_point()+
+  geom_smooth(method = "gam",se = FALSE, color = "Green")+
+  labs(title = "Plot C")  
+
+plot_d <- ggplot(county_clean, aes(x = homeownership, y = poverty, group = metro))+
+  geom_smooth(method = "gam", se = FALSE, color = "Blue")+
+  geom_point()+
+  labs(title = "Plot D") 
+
+plot_e <- ggplot(county_clean, aes(x = homeownership, y = poverty, group = metro))+
+  geom_point(aes(color = metro))+
+  geom_smooth(method = "gam", se = FALSE, color = "Blue", aes(linetype = metro))+
+  guides(color = guide_legend(order = 2),    
+    linetype = guide_legend(order = 1)) +
+  labs(title = "Plot E") 
+
+plot_f <- ggplot(county_clean, aes(x = homeownership, y = poverty, group = metro, color =   metro))+
+  geom_point()+
+  geom_smooth(method = "gam", se = FALSE, )+
+  labs(title = "Plot F") 
+
+plot_g <- ggplot(county_clean, aes(x = homeownership, y = poverty))+
+  geom_point(aes(group = metro, color = metro))+
+  geom_smooth(method = "gam",  se = FALSE, color = "Blue")+
+  labs(title = "Plot G") 
+
+plot_h <- ggplot(county_clean, aes(x = homeownership, y = poverty))+
+  geom_point(aes(group = metro, color = metro))+
+  labs(title = "Plot H")
+
+# Grouping plots by using patchwork.
+combined1_plot <- (plot_a | plot_b) /
+                 (plot_c | plot_d)
+combined1_plot + plot_annotation(title = "Comparison of Homeownership and Poverty Relationships Across U.S. Counties")
+
+combined2_plot <-(plot_e | plot_f) /
+                 (plot_g | plot_h)
+combined2_plot
+
+
 
 ```
 
@@ -25,14 +91,59 @@ library(tidyverse)
 
 ```{r}
 #| label: label-me-2
-
+options(tigris_use_cache = TRUE)
+az_counties <- counties(state = "AZ", year = 2021, progress_bar = FALSE)
+glimpse(az_counties)
 ```
+```{r}
+#| warning: false
+#| Massege: false
+ggplot(data = az_counties)+
+  geom_sf(fill = "grey90") +
+  geom_sf_text(aes(label = NAME), size = 3)+
+  labs(x="Longitude",
+       y="Latitude",
+       title ="Conuties in Arizona State",
+       caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1")+
+  theme_minimal()
+```
+
+
 
 ## 3.  Arizona state of population change
 
 ```{r}
 #| label: label-me-3
-
+population_data<-read_excel("data/co-est2023-pop-04.xlsx", skip=4, n_max=16)
+glimpse(population_data)
+```
+```{r}
+population_data<-population_data|>
+  rename(population_2020=`7186683`,
+         population_2023=`7431344`)|>
+## The following code to remove leading dots and trailing spaces was adapted from online solutions.
+  mutate(Arizona=gsub("^\\.|\\s+$| County, Arizona", "", Arizona),
+         total_pop_change_20_23 = population_2023-population_2020)
+glimpse(population_data)         
+```
+```{r}
+az_counties <- az_counties|>
+  left_join(population_data, by = c("NAME"="Arizona"))
+glimpse(az_counties)  
+```
+```{R}
+#| warning: false
+#| Massege: false
+ggplot(data = az_counties)+
+  geom_sf(aes(fill = total_pop_change_20_23)) +
+  scale_fill_distiller(palette = "RdBu")+
+  labs(x="Longitude",
+       y="Latitude",
+       title ="Counties in Arizona State",
+       subtitle = "July 01,2020 to July 01,2023",
+       caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1 \npopulation data from US Census Bureau",
+       fill = "Population change")+
+  theme_minimal()
 ```
 
 ## 4.  Arizona state of Indiginous Tribal Regions
