@@ -18,7 +18,8 @@ pacman::p_load(tidyverse,
                patchwork,
                tigris,
                sf,
-               readxl)
+               readxl,
+               ggrepel)
 
 ```
 ## 1 - A second chance
@@ -103,7 +104,7 @@ ggplot(data = az_counties)+
   geom_sf_text(aes(label = NAME), size = 3)+
   labs(x="Longitude",
        y="Latitude",
-       title ="Conuties in Arizona State",
+       title ="Counties in Arizona State",
        caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1")+
   theme_minimal()
 ```
@@ -139,7 +140,7 @@ ggplot(data = az_counties)+
   scale_fill_distiller(palette = "RdBu")+
   labs(x="Longitude",
        y="Latitude",
-       title ="Counties in Arizona State",
+       title ="Resident Population Change for Counties in AZ",
        subtitle = "July 01,2020 to July 01,2023",
        caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1 \npopulation data from US Census Bureau",
        fill = "Population change")+
@@ -147,5 +148,47 @@ ggplot(data = az_counties)+
 ```
 
 ## 4.  Arizona state of Indiginous Tribal Regions
+```{R}
+#| warning: false
+#| Massege: false
+tribal_regions<- st_read("data/American_Indian_Reservations_in_Arizona.shp")
+tribal_regions<- st_transform(tribal_regions,crs=4269)
+glimpse(tribal_regions)
+```
+```{R}
+tribal_regions_name<-tribal_regions|>
+ filter(NAME %in% c("Hopi Tribe",
+                    "Navajo Nation",
+                    "White Mountain Apache Tribe",
+                    "San Carlos Apache Tribe",
+                    "Tohono O’odham Nation"))
+```
+
+```{R}
+#Calculate the centroids of the five major tribes (code adapted based on online solutions for computing geometric centroids)
+tribal_centroids <- st_centroid(tribal_regions_name)
+
+tribal_centroids <- tribal_centroids |>
+  mutate( lon = st_coordinates(geometry)[,1],
+          lat = st_coordinates(geometry)[,2])
+```
+
+```{R}
+ggplot(data = az_counties)+
+  geom_sf(fill="grey90", color="white") +
+  geom_sf(data = tribal_regions, color="black",linewidth = 1)+
+   geom_label_repel(data = tribal_centroids,
+    aes(x = lon, y = lat, label = NAME),
+    size = 3,
+    nudge_x = 0.1,
+    nudge_y = 0.1) +
+  labs(x="Longitude",
+       y="Latitude",
+       title ="Indigenous Tribal Boundaries in AZ",
+       caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1 \nIndigenous Tribe Shapefile obtained from AZGeo Data")+
+  theme_minimal()
+
+
+```
 
 ## 5. Arizona state of patchwork
