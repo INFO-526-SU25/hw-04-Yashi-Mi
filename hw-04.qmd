@@ -19,7 +19,8 @@ pacman::p_load(tidyverse,
                tigris,
                sf,
                readxl,
-               ggrepel)
+               ggrepel,
+               cowplot)
 
 ```
 ## 1 - A second chance
@@ -136,7 +137,7 @@ glimpse(az_counties)
 #| warning: false
 #| Massege: false
 ggplot(data = az_counties)+
-  geom_sf(aes(fill = total_pop_change_20_23)) +
+  geom_sf(aes(fill = total_pop_change_20_23),color = "white") +
   scale_fill_distiller(palette = "RdBu")+
   labs(x="Longitude",
        y="Latitude",
@@ -180,8 +181,8 @@ ggplot(data = az_counties)+
    geom_label_repel(data = tribal_centroids,
     aes(x = lon, y = lat, label = NAME),
     size = 3,
-    nudge_x = 0.1,
-    nudge_y = 0.1) +
+    nudge_x = 0.15,
+    nudge_y = 0.15) +
   labs(x="Longitude",
        y="Latitude",
        title ="Indigenous Tribal Boundaries in AZ",
@@ -192,3 +193,43 @@ ggplot(data = az_counties)+
 ```
 
 ## 5. Arizona state of patchwork
+```{R}
+#| warning: false
+#| Massege: false
+az_map<-ggplot(data = az_counties)+
+  geom_sf(aes(fill = total_pop_change_20_23), color="white") +
+  scale_fill_distiller(palette = "RdBu")+
+  labs(x="Longitude",
+       y="Latitude",
+       title ="Resident Population Change for Counties in AZ",
+       subtitle = "July 01,2020 to July 01,2023",
+       caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1 \npopulation data from US Census Bureau \nIndigenous Tribe Shapefile obtained from AZGeo Data",
+       fill = "Population change")+
+  coord_sf(xlim=c(-120,-110),
+           ylim=c(30,36))+
+  theme_minimal()
+
+az_tribal_map<-ggplot()+
+  geom_sf(data = az_counties, aes(fill = total_pop_change_20_23),color="white")+
+  scale_fill_distiller(palette = "RdBu")+
+  geom_sf(data = tribal_regions, color="black",linewidth = 1)+
+   geom_label_repel(data = tribal_centroids,
+    aes(x = lon, y = lat, label = NAME),
+    size = 2,
+    nudge_x = 0.1,
+    nudge_y = 0.1) +
+  coord_sf(xlim=c(-113.2,-110.5),
+           ylim=c(31,34))+
+  theme_void()+
+  theme(legend.position = "none")
+
+
+combined_plot <- az_map +
+  inset_element(az_tribal_map,
+    left = 0.1,   
+    bottom = -0.05,
+    right = 0.5,
+    top = 0.5)
+
+  combined_plot
+```
